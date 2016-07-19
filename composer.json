@@ -14,5 +14,5 @@
 
 	"autoload" : {
 		"files" : [ "wp-cli-rename-db-prefix.php" ]
-	},
+	}
 }
