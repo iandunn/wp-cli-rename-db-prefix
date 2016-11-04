@@ -17,8 +17,14 @@ if ( ! defined( 'WP_CLI' ) ) {
 /*
  * TODO
  *
- * Add MultiSite support
+ * change invocation to `wp db rename-prefix <new>`
+ *
  * Write unit tests
+ *      can be in tests dir intead of features?
+ *      prune unused stuff that `scaffold package-tests` added
+ *
+ * Add MultiSite support
+ *
  */
 
 class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
@@ -65,6 +71,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			$this->update_blog_options_tables();
 			$this->update_options_table();
 			$this->update_usermeta_table();
+			// todo set global $table_prefix to new one now, or earlier in process, to avoid errors during shutdown, etc?
 
 			\WP_CLI::success( 'Successfully renamed database prefix.' );
 		} catch ( Exception $exception ) {

@@ -1,7 +1,7 @@
 WP-CLI Rename Database Prefix
 ===============================
 
-A WP-CLI command to rename WordPress' database prefix.
+A [WP-CLI](http://wp-cli.org/) command to rename WordPress' database prefix.
 
 ## Installing
 
