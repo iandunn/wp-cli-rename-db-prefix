@@ -28,7 +28,10 @@ if ( ! defined( 'WP_CLI' ) ) {
  */
 
 class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
-	var $old_prefix, $new_prefix;
+	public $old_prefix;
+	public $new_prefix;
+
+	public $is_dry_run = false;
 
 	/**
 	 * Rename WordPress' database prefix.
@@ -40,6 +43,9 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * <new_prefix>
 	 * : The new database prefix
 	 *
+	 * [--dry-run]
+	 * : Preview which data would be updated.
+	 *
 	 * ## EXAMPLES
 	 *
 	 * wp rename-db-prefix foo_
@@ -49,6 +55,8 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 */
 	public function __invoke( $args, $assoc_args ) {
 		global $wpdb;
+
+		$this->is_dry_run = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
 
 		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
 
@@ -86,6 +94,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	protected function confirm() {
 		\WP_CLI::line();
 
+		if ( $this->is_dry_run ) {
+			\WP_CLI::line( 'Running in dry run mode.' );
+			return;
+		}
+
 		\WP_CLI::warning( "Use this at your own risk. If something goes wrong, it could break your site. Before running this, make sure to back up your `wp-config.php` file and run `wp db export`." );
 
 		\WP_CLI::confirm( sprintf(
@@ -102,6 +115,10 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * @throws Exception
 	 */
 	protected function update_wp_config() {
+		if ( $this->is_dry_run ) {
+			return;
+		}
+
 		$wp_config_path     = \WP_CLI\Utils\locate_wp_config(); // we know this is valid, because wp-cli won't run if it's not
 		$wp_config_contents = file_get_contents( $wp_config_path );
 		$search_pattern     = '/(\$table_prefix\s*=\s*)([\'"]).+?\\2(\s*;)/';
@@ -145,6 +162,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 				$this->new_prefix . $table
 			);
 
+			if ( $this->is_dry_run ) {
+				\WP_CLI::line( $rename_query );
+				continue;
+			}
+
 			if ( false === $wpdb->query( $rename_query ) ) {
 				throw new Exception( 'MySQL error: ' . $wpdb->last_error );
 			}
@@ -180,11 +202,16 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			$update_query = $wpdb->prepare( "
 				UPDATE `{$this->new_prefix}{$site->blog_id}_options`
 				SET   option_name = %s
-				WHERE option_name = %s 
+				WHERE option_name = %s
 				LIMIT 1;",
 				$this->new_prefix . $site->blog_id . '_user_roles',
 				$this->old_prefix . $site->blog_id . '_user_roles'
 			);
+
+			if ( $this->is_dry_run ) {
+				\WP_CLI::line( $update_query );
+				continue;
+			}
 
 			if ( ! $wpdb->query( $update_query ) ) {
 				throw new Exception( 'MySQL error: ' . $wpdb->last_error ); // todo test
@@ -203,11 +230,16 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		$update_query = $wpdb->prepare( "
 			UPDATE `{$this->new_prefix}options`
 			SET   option_name = %s
-			WHERE option_name = %s 
+			WHERE option_name = %s
 			LIMIT 1;",
 			$this->new_prefix . 'user_roles',
 			$this->old_prefix . 'user_roles'
 		);
+
+		if ( $this->is_dry_run ) {
+			\WP_CLI::line( $update_query );
+			return;
+		}
 
 		if ( ! $wpdb->query( $update_query ) ) {
 			throw new Exception( 'MySQL error: ' . $wpdb->last_error );
@@ -222,7 +254,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	protected function update_usermeta_table() {
 		global $wpdb;
 
-		$rows = $wpdb->get_results( "SELECT meta_key FROM `{$this->new_prefix}usermeta`;" );
+		if ( $this->is_dry_run ) {
+			$rows = $wpdb->get_results( "SELECT meta_key FROM `{$this->old_prefix}usermeta`;" );
+		} else {
+			$rows = $wpdb->get_results( "SELECT meta_key FROM `{$this->new_prefix}usermeta`;" );
+		}
 
 		if ( ! $rows ) {
 			throw new Exception( 'MySQL error: ' . $wpdb->last_error );
@@ -245,6 +281,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 				$new_key,
 				$row->meta_key
 			);
+
+			if ( $this->is_dry_run ) {
+				\WP_CLI::line( $update_query );
+				continue;
+			}
 
 			if ( ! $wpdb->query( $update_query ) ) {
 				throw new Exception( 'MySQL error: ' . $wpdb->last_error );
