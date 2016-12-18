@@ -11,30 +11,17 @@ License:     GPLv2
 */
 
 if ( ! defined( 'WP_CLI' ) ) {
-	return;
+    exit;
 }
 
-/*
- * TODO
- *
- * change invocation to `wp db rename-prefix <new>`
- *
- * Write unit tests
- *      can be in tests dir intead of features?
- *      prune unused stuff that `scaffold package-tests` added
- *
- * Add MultiSite support
- *
- */
-
-class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
+class WP_CLI_DB_Rename_Prefix extends \WP_CLI_Command {
 	public $old_prefix;
 	public $new_prefix;
 
 	public $is_dry_run = false;
 
 	/**
-	 * Rename WordPress' database prefix.
+	 * Rename database prefix.
 	 *
 	 * You will be prompted for confirmation before the command makes any changes.
 	 *
@@ -48,19 +35,23 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 * wp rename-db-prefix foo_
+	 * wp db rename-prefix foo_
 	 *
 	 * @param array $args
 	 * @param array $assoc_args
+	 *
+	 * @alias change-prefix
 	 */
 	public function __invoke( $args, $assoc_args ) {
 		global $wpdb;
 
 		$this->is_dry_run = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
 
-		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
+		// Reset `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
+		wp_debug_mode();
 
-		$wpdb->show_errors( WP_DEBUG ); // This makes it easier to catch errors while developing this command, but we don't need to show them to users
+		// Make it easier to catch errors while developing this command, but we don't need to show them to users
+		$wpdb->show_errors( WP_DEBUG );
 
 		$this->old_prefix = $wpdb->base_prefix;
 		$this->new_prefix = $args[0];
@@ -79,7 +70,6 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			$this->update_blog_options_tables();
 			$this->update_options_table();
 			$this->update_usermeta_table();
-			// todo set global $table_prefix to new one now, or earlier in process, to avoid errors during shutdown, etc?
 
 			\WP_CLI::success( 'Successfully renamed database prefix.' );
 		} catch ( Exception $exception ) {
@@ -89,7 +79,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Confirm that the user wants to rename the prefix
+	 * Confirm that the user wants to rename the prefix.
 	 */
 	protected function confirm() {
 		\WP_CLI::line();
@@ -99,7 +89,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			return;
 		}
 
-		\WP_CLI::warning( "Use this at your own risk. If something goes wrong, it could break your site. Before running this, make sure to back up your `wp-config.php` file and run `wp db export`." );
+		\WP_CLI::warning( 'Use this at your own risk. If something goes wrong, it could break your site. Before running this, make sure to back up your `wp-config.php` file and run `wp db export`.' );
 
 		\WP_CLI::confirm( sprintf(
 			"\nAre you sure you want to rename %s's database prefix from `%s` to `%s`?",
@@ -110,7 +100,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	}
 
 	/**
-	 * Update the prefix in `wp-config.php`
+	 * Update the prefix in wp-config.php.
 	 *
 	 * @throws Exception
 	 */
@@ -119,23 +109,24 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			return;
 		}
 
-		$wp_config_path     = \WP_CLI\Utils\locate_wp_config(); // we know this is valid, because wp-cli won't run if it's not
+		// We know this is valid, because wp-cli won't run if it's not
+		$wp_config_path     = \WP_CLI\Utils\locate_wp_config();
 		$wp_config_contents = file_get_contents( $wp_config_path );
 		$search_pattern     = '/(\$table_prefix\s*=\s*)([\'"]).+?\\2(\s*;)/';
 		$replace_pattern    = "\${1}'{$this->new_prefix}'\${3}";
 		$wp_config_contents = preg_replace( $search_pattern, $replace_pattern, $wp_config_contents, -1, $number_replacements );
 
 		if ( 0 === $number_replacements ) {
-			throw new Exception( "Failed to replace `\$table_prefix` in `wp-config.php`." );
+			throw new Exception( 'Failed to replace `\$table_prefix` in `wp-config.php`.' );
 		}
 
 		if ( ! file_put_contents( $wp_config_path, $wp_config_contents ) ) {
-			throw new Exception( "Failed to update updated `wp-config.php` file." );
+			throw new Exception( 'Failed to update updated `wp-config.php` file.' );
 		}
 	}
 
 	/**
-	 * Rename all of WordPress' database tables
+	 * Rename all database tables.
 	 *
 	 * @throws Exception
 	 */
@@ -147,7 +138,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			$wpdb->esc_like( $this->old_prefix )
 		);
 
-		$tables = $wpdb->get_results( $show_table_query, ARRAY_N );
+		$tables = $wpdb->get_results( $wpdb->prepare( '%s', $show_table_query ), ARRAY_N );
 
 		if ( ! $tables ) {
 			throw new Exception( 'MySQL error: ' . $wpdb->last_error );
@@ -156,8 +147,8 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		foreach ( $tables as $table ) {
 			$table = substr( $table[0], strlen( $this->old_prefix ) );
 
-			$rename_query = sprintf(
-				"RENAME TABLE `%s` TO `%s`;",
+			$rename_query = $wpdb->prepare(
+				'RENAME TABLE `%s` TO `%s`;',
 				$this->old_prefix . $table,
 				$this->new_prefix . $table
 			);
@@ -167,14 +158,14 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 				continue;
 			}
 
-			if ( false === $wpdb->query( $rename_query ) ) {
+			if ( false === $wpdb->query( $rename_query ) ) { // WPCS: unprepared SQL ok.
 				throw new Exception( 'MySQL error: ' . $wpdb->last_error );
 			}
 		}
 	}
 
 	/**
-	 * Update rows in all of the site `options` tables
+	 * Update rows in all site's `options` tables.
 	 *
 	 * @throws Exception
 	 */
@@ -187,23 +178,21 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 
 		throw new Exception( 'Not done yet' );
 
-		// todo this hasn't been tested at all
-		// todo should this really go after update_options_table, and reuse the same query?
-		// todo is this running on the root site twice b/c update_options_table() hits that too? should call either that or this, based on is_multisite() ?
-
-    	$sites = wp_get_sites( array( 'limit' => false ) );   //todo can't use b/c already renamed tables?
+		// TODO Can't use b/c already renamed tables?
+		$sites = wp_get_sites( array( 'limit' => false ) );
 		//blogs = $wpdb->get_col( "SELECT blog_id FROM `" . $this->new_prefix . "blogs` WHERE public = '1' AND archived = '0' AND mature = '0' AND spam = '0' ORDER BY blog_id DESC" );
 
 		if ( ! $sites ) {
-			throw new Exception( 'Failed to get all sites.' );  // todo test
+			throw new Exception( 'Failed to get all sites.' );
 		}
 
 		foreach ( $sites as $site ) {
-			$update_query = $wpdb->prepare( "
-				UPDATE `{$this->new_prefix}{$site->blog_id}_options`
+			$update_query = $wpdb->prepare( '
+				UPDATE `%s_options`
 				SET   option_name = %s
 				WHERE option_name = %s
-				LIMIT 1;",
+				LIMIT 1;',
+				$this->new_prefix . $site->blog_id,
 				$this->new_prefix . $site->blog_id . '_user_roles',
 				$this->old_prefix . $site->blog_id . '_user_roles'
 			);
@@ -213,25 +202,26 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 				continue;
 			}
 
-			if ( ! $wpdb->query( $update_query ) ) {
-				throw new Exception( 'MySQL error: ' . $wpdb->last_error ); // todo test
+			if ( ! $wpdb->query( $update_query ) ) { // WPCS: unprepared SQL ok.
+				throw new Exception( 'MySQL error: ' . $wpdb->last_error );
 			}
 		}
 	}
 
 	/**
-	 * Update rows in the `options` table
+	 * Update rows in the `options` table.
 	 *
 	 * @throws Exception
 	 */
 	protected function update_options_table() {
 		global $wpdb;
 
-		$update_query = $wpdb->prepare( "
-			UPDATE `{$this->new_prefix}options`
+		$update_query = $wpdb->prepare( '
+			UPDATE `%soptions`
 			SET   option_name = %s
 			WHERE option_name = %s
-			LIMIT 1;",
+			LIMIT 1;',
+			$this->new_prefix,
 			$this->new_prefix . 'user_roles',
 			$this->old_prefix . 'user_roles'
 		);
@@ -241,13 +231,13 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			return;
 		}
 
-		if ( ! $wpdb->query( $update_query ) ) {
+		if ( ! $wpdb->query( $update_query ) ) { // WPCS: unprepared SQL ok.
 			throw new Exception( 'MySQL error: ' . $wpdb->last_error );
 		}
 	}
 
 	/**
-	 * Update rows in the `usermeta` table
+	 * Update rows in the `usermeta` table.
 	 *
 	 * @throws Exception
 	 */
@@ -255,9 +245,9 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		global $wpdb;
 
 		if ( $this->is_dry_run ) {
-			$rows = $wpdb->get_results( "SELECT meta_key FROM `{$this->old_prefix}usermeta`;" );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT meta_key FROM `%susermeta`;', $this->old_prefix ) );
 		} else {
-			$rows = $wpdb->get_results( "SELECT meta_key FROM `{$this->new_prefix}usermeta`;" );
+			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT meta_key FROM `%susermeta`;', $this->new_prefix ) );
 		}
 
 		if ( ! $rows ) {
@@ -273,11 +263,12 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 
 			$new_key = $this->new_prefix . substr( $row->meta_key, strlen( $this->old_prefix ) );
 
-			$update_query = $wpdb->prepare( "
-				UPDATE `{$this->new_prefix}usermeta`
+			$update_query = $wpdb->prepare( '
+				UPDATE `%susermeta`
 				SET meta_key=%s
 				WHERE meta_key=%s
-				LIMIT 1;",
+				LIMIT 1;',
+				$this->new_prefix,
 				$new_key,
 				$row->meta_key
 			);
@@ -287,11 +278,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 				continue;
 			}
 
-			if ( ! $wpdb->query( $update_query ) ) {
+			if ( ! $wpdb->query( $update_query ) ) { // WPCS: unprepared SQL ok.
 				throw new Exception( 'MySQL error: ' . $wpdb->last_error );
 			}
 		}
 	}
 }
 
-\WP_CLI::add_command( 'rename-db-prefix', 'WP_CLI_Rename_DB_Prefix' );
+\WP_CLI::add_command( 'db rename-prefix', 'WP_CLI_DB_Rename_Prefix' );
