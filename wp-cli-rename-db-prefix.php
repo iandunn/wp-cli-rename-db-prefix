@@ -33,6 +33,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 
 	public $is_dry_run = false;
 	public $is_no_prompt = false;
+	public $is_no_config_update = false;
 
 	/**
 	 * Rename WordPress' database prefix.
@@ -50,6 +51,9 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * [--no-prompt]
 	 * : Skip asking for confirmation. 
 	 *
+	 * [--no-config-update]
+	 * : Skip updating wp-config.php
+	 *
 	 * ## EXAMPLES
 	 *
 	 * wp rename-db-prefix foo_
@@ -62,6 +66,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 
 		$this->is_dry_run = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
 		$this->is_no_prompt = \WP_CLI\Utils\get_flag_value( $assoc_args, 'no-prompt', false );
+		$this->is_no_config_update = \WP_CLI\Utils\get_flag_value( $assoc_args, 'no-config-update', false );
 
 		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
 
@@ -125,6 +130,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 */
 	protected function update_wp_config() {
 		if ( $this->is_dry_run ) {
+			return;
+		}
+		
+		if ( $this->is_no_config_update ) {
+			\WP_CLI::line( 'Skipping wp-config.php update as requested.' );
 			return;
 		}
 
