@@ -67,8 +67,8 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	public function __invoke( $args, $assoc_args ) {
 		global $wpdb;
 
-		$this->is_dry_run = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
-		$this->is_prompt = \WP_CLI\Utils\get_flag_value( $assoc_args, 'prompt', true );
+		$this->is_dry_run       = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
+		$this->is_prompt        = \WP_CLI\Utils\get_flag_value( $assoc_args, 'prompt', true );
 		$this->is_config_update = \WP_CLI\Utils\get_flag_value( $assoc_args, 'config-update', true );
 
 		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
@@ -111,11 +111,11 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			\WP_CLI::line( 'Running in dry run mode.' );
 			return;
 		}
-		
+
 		if ( ! $this->is_prompt ) {
 			return;
 		}
-		
+
 		\WP_CLI::warning( "Use this at your own risk. If something goes wrong, it could break your site. Before running this, make sure to back up your `wp-config.php` file and run `wp db export`." );
 
 		\WP_CLI::confirm( sprintf(
@@ -135,7 +135,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		if ( $this->is_dry_run ) {
 			return;
 		}
-		
+
 		if ( ! $this->is_config_update ) {
 			\WP_CLI::line( 'Skipping wp-config.php update as requested.' );
 			return;
@@ -145,7 +145,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		$wp_config_contents = file_get_contents( $wp_config_path );
 		$search_pattern     = '/(\$table_prefix\s*=\s*)([\'"]).+?\\2(\s*;)/';
 		$replace_pattern    = "\${1}'{$this->new_prefix}'\${3}";
-		$wp_config_contents = preg_replace( $search_pattern, $replace_pattern, $wp_config_contents, -1, $number_replacements );
+		$wp_config_contents = preg_replace( $search_pattern, $replace_pattern, $wp_config_contents, - 1, $number_replacements );
 
 		if ( 0 === $number_replacements ) {
 			throw new Exception( "Failed to replace `\$table_prefix` in `wp-config.php`." );
@@ -213,7 +213,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		// todo should this really go after update_options_table, and reuse the same query?
 		// todo is this running on the root site twice b/c update_options_table() hits that too? should call either that or this, based on is_multisite() ?
 
-    	$sites = wp_get_sites( array( 'limit' => false ) );   //todo can't use b/c already renamed tables?
+		$sites = get_sites( array( 'number' => false ) );
 		//blogs = $wpdb->get_col( "SELECT blog_id FROM `" . $this->new_prefix . "blogs` WHERE public = '1' AND archived = '0' AND mature = '0' AND spam = '0' ORDER BY blog_id DESC" );
 
 		if ( ! $sites ) {
