@@ -49,7 +49,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * : Preview which data would be updated.
 	 * default: false
 	 *
-	 * [--prompt]
+	 * [--confirm]
 	 * : Ask for confirmation.
 	 * default: true
 	 *
