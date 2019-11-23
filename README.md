@@ -11,9 +11,9 @@ A [WP-CLI](http://wp-cli.org/) command to rename WordPress' database prefix.
 
 `wp rename-db-prefix <new_prefix>`
 
-`wp rename-db-prefix <new_prefix> [--dry-run] [--no-prompt] [--no-config-update]`
+`wp rename-db-prefix <new_prefix> [--dry-run] [--no-confirm] [--no-config-update]`
 
-You will be prompted for confirmation before the command makes any changes unless using --no-prompt flag.  
+You will be prompted for confirmation before the command makes any changes unless using --no-confirm flag.  
 Using the --no-config-update option will not update your `wp-config.php` (useful for non-standard environments).
 
 ## Warning
