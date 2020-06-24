@@ -5,7 +5,7 @@ A [WP-CLI](http://wp-cli.org/) command to rename WordPress' database prefix.
 
 ## Installing
 
-`wp package install iandunn/wp-cli-rename-db-prefix`
+`wp package install upsell/wp-cli-rename-db-prefix`
 
 ## Usage
 
