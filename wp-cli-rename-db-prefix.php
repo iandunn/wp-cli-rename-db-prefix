@@ -49,7 +49,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * : Preview which data would be updated.
 	 * default: false
 	 *
-	 * [--prompt]
+	 * [--confirm]
 	 * : Ask for confirmation.
 	 * default: true
 	 *
@@ -68,7 +68,7 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		global $wpdb;
 
 		$this->is_dry_run       = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
-		$this->is_prompt        = \WP_CLI\Utils\get_flag_value( $assoc_args, 'prompt', true );
+		$this->is_prompt        = \WP_CLI\Utils\get_flag_value( $assoc_args, 'confirm', true );
 		$this->is_config_update = \WP_CLI\Utils\get_flag_value( $assoc_args, 'config-update', true );
 
 		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
