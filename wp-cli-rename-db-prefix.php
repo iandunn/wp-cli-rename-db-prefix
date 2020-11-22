@@ -32,13 +32,10 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	public $new_prefix;
 
 	public $is_dry_run = false;
-	public $is_prompt = true;
 	public $is_config_update = true;
 
 	/**
 	 * Rename WordPress' database prefix.
-	 *
-	 * You will be prompted for confirmation before the command makes any changes.
 	 *
 	 * ## OPTIONS
 	 *
@@ -48,10 +45,6 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 	 * [--dry-run]
 	 * : Preview which data would be updated.
 	 * default: false
-	 *
-	 * [--confirm]
-	 * : Ask for confirmation.
-	 * default: true
 	 *
 	 * [--config-update]
 	 * : updates wp-config.php.
@@ -68,7 +61,6 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		global $wpdb;
 
 		$this->is_dry_run       = \WP_CLI\Utils\get_flag_value( $assoc_args, 'dry-run', false );
-		$this->is_prompt        = \WP_CLI\Utils\get_flag_value( $assoc_args, 'confirm', true );
 		$this->is_config_update = \WP_CLI\Utils\get_flag_value( $assoc_args, 'config-update', true );
 
 		wp_debug_mode();    // re-set `display_errors` after WP-CLI overrides it, see https://github.com/wp-cli/wp-cli/issues/706#issuecomment-203610437
@@ -81,8 +73,6 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 		if ( is_multisite() ) {
 			\WP_CLI::error( "This command doesn't support MultiSite yet." );
 		}
-
-		$this->confirm();
 
 		try {
 			\WP_CLI::line();
@@ -99,31 +89,6 @@ class WP_CLI_Rename_DB_Prefix extends \WP_CLI_Command {
 			\WP_CLI::error( $exception->getMessage(), false );
 			\WP_CLI::error( "You should check your site to see if it's broken. If it is, you can fix it by restoring your `wp-config.php` file and your database from backups." );
 		}
-	}
-
-	/**
-	 * Confirm that the user wants to rename the prefix
-	 */
-	protected function confirm() {
-		\WP_CLI::line();
-
-		if ( $this->is_dry_run ) {
-			\WP_CLI::line( 'Running in dry run mode.' );
-			return;
-		}
-
-		if ( ! $this->is_prompt ) {
-			return;
-		}
-
-		\WP_CLI::warning( "Use this at your own risk. If something goes wrong, it could break your site. Before running this, make sure to back up your `wp-config.php` file and run `wp db export`." );
-
-		\WP_CLI::confirm( sprintf(
-			"\nAre you sure you want to rename %s's database prefix from `%s` to `%s`?",
-			parse_url( site_url(), PHP_URL_HOST ),
-			$this->old_prefix,
-			$this->new_prefix
-		) );
 	}
 
 	/**
