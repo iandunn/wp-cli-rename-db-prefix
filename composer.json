@@ -1,8 +1,8 @@
 {
-	"name"        : "iandunn/wp-cli-rename-db-prefix",
+	"name"        : "tobias992/wp-cli-rename-db-prefix",
 	"description" : "A WP-CLI command to rename WordPress' database prefix.",
 	"type"        : "wp-cli-package",
-	"homepage"    : "https://github.com/iandunn/wp-cli-rename-db-prefix",
+	"homepage"    : "https://github.com/tobias992/wp-cli-rename-db-prefix",
 	"license"     : "GPLv2",
 
 	"authors" : [
