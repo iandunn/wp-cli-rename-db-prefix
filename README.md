@@ -21,4 +21,4 @@ Use this at your own risk. If something goes wrong, it could break your site. Be
 
 ## Notes
 
-A lot of the code is based on [iThemes Security](https://wordpress.org/plugins/better-wp-security/).
+A lot of the code is based on [iThemes Security](https://wordpress.org/plugins/better-wp-security/). Forked from iandunn/wp-cli-rename-db-prefix.
